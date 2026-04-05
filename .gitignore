@@ -56,3 +56,7 @@ dmypy.json
 
 # Ignore cursor AI rules
 .cursor/rules/codacy.mdc
+
+# Forgejo Runner
+.forgejo-runner-data/
+

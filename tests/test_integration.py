@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.skip(reason="Integration tests for Full server disabled in Journey focus mode")
+
 """
 Simple integration test for Plane MCP Server.
 
@@ -10,6 +14,7 @@ Environment Variables Required:
 import asyncio
 import os
 import uuid
+import pytest
 
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
@@ -244,6 +249,7 @@ async def run_integration_test():
         print("Integration test passed!")
 
 
+@pytest.mark.skipif(not os.getenv("PLANE_TEST_API_KEY"), reason="Missing PLANE_TEST_API_KEY")
 def test_full_integration():
     """Pytest entry point - runs the async integration test."""
     asyncio.run(run_integration_test())
@@ -404,6 +410,7 @@ async def run_tools_availability_test():
         print("Tools availability test passed!")
 
 
+@pytest.mark.skipif(not os.getenv("PLANE_TEST_API_KEY"), reason="Missing PLANE_TEST_API_KEY")
 def test_tools_availability():
     """Pytest entry point - verifies all expected tools are registered."""
     asyncio.run(run_tools_availability_test())

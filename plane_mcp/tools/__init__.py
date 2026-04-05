@@ -22,10 +22,14 @@ from plane_mcp.tools.work_item_types import register_work_item_type_tools
 from plane_mcp.tools.work_items import register_work_item_tools
 from plane_mcp.tools.work_logs import register_work_log_tools
 from plane_mcp.tools.workspaces import register_workspace_tools
+from plane_mcp.tools.generated_core import register_core_generated_tools
+from plane_mcp.tools.generated_metadata import register_metadata_generated_tools
 
 
 def register_tools(mcp: FastMCP) -> None:
     """Register all tools with the MCP server."""
+    register_core_generated_tools(mcp)
+    register_metadata_generated_tools(mcp)
     register_project_tools(mcp)
     register_work_item_tools(mcp)
     register_work_item_activity_tools(mcp)
