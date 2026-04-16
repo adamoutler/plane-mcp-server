@@ -12,6 +12,7 @@ from plane.models.work_items import CreateWorkItemComment, UpdateWorkItem
 from plane_mcp.client import get_plane_client_context
 from plane_mcp.journey.base import JourneyBase, mcp_error_boundary
 from plane_mcp.journey.lod import LODProfile
+from plane_mcp.journey.yaml_formatter import with_yaml
 from plane_mcp.resolver import EntityResolutionError, EntityResolver
 from plane_mcp.sanitize import sanitize_html
 
@@ -186,9 +187,10 @@ def register_workflow_tools(mcp: FastMCP) -> None:
             ticket_id: The globally unique, human-readable identifier (e.g., ENG-123).
             state_name: The name of the state to transition to (e.g. 'In Progress').
         """
-    transition_ticket = mcp.tool()(mcp_error_boundary(transition_ticket))
+    transition_ticket = mcp.tool()(with_yaml(mcp_error_boundary(transition_ticket)))
 
     @mcp.tool()
+    @with_yaml
     @mcp_error_boundary
     def begin_work(ticket_ids: list[str], cycle_name: str) -> dict:
         """
@@ -207,6 +209,7 @@ def register_workflow_tools(mcp: FastMCP) -> None:
         return journey.begin_work(ticket_ids, cycle_name)
 
     @mcp.tool()
+    @with_yaml
     @mcp_error_boundary
     def complete_work(ticket_id: str, comment: str) -> dict:
         """

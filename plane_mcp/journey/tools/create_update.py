@@ -10,6 +10,7 @@ from plane.models.work_items import CreateWorkItem, UpdateWorkItem
 
 from plane_mcp.client import get_plane_client_context
 from plane_mcp.journey.base import JourneyBase, mcp_error_boundary
+from plane_mcp.journey.yaml_formatter import with_yaml
 from plane_mcp.resolver import EntityResolver
 from plane_mcp.sanitize import sanitize_html
 
@@ -286,9 +287,10 @@ def register_create_update_tools(mcp: FastMCP) -> None:
             labels: List of label names.
             cycle_name: Name of the cycle to add this ticket to.
         """
-    create_ticket = mcp.tool()(mcp_error_boundary(create_ticket))
+    create_ticket = mcp.tool()(with_yaml(mcp_error_boundary(create_ticket)))
 
     @mcp.tool()
+    @with_yaml
     @mcp_error_boundary
     def update_ticket(
         ticket_id: str,

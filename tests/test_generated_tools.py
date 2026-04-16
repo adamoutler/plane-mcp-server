@@ -7,7 +7,10 @@ def check_file_for_uuid(filepath):
         tree = ast.parse(f.read())
         
     for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef) and node.name in ('get_project', 'list_issues', 'create_issue_raw', 'update_issue_raw', 'delete_issue', 'list_states', 'create_state'):
+        if isinstance(node, ast.FunctionDef) and node.name in (
+            'get_project', 'list_issues', 'create_issue_raw', 'update_issue_raw',
+            'delete_issue', 'list_states', 'create_state',
+        ):
             for arg in node.args.args:
                 if arg.arg.endswith('_id'):
                     assert ast.unparse(arg.annotation) == "uuid.UUID", f"{arg.arg} in {node.name} is not UUID!"

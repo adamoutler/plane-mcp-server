@@ -85,7 +85,11 @@ def test_read_ticket_success(mock_get_context, resolver, mock_client):
     mock_item.priority = "high"
     mock_item.description_html = "<p>Desc</p>"
     mock_item.labels = []
-    mock_item.model_dump.return_value = {"id": "ticket-1", "name": "Test Ticket", "sequence_id": 1, "project_detail": {"identifier": "TEST"}, "state_detail": {"name": "In Progress"}, "priority": "high", "description_html": "<p>Desc</p>", "labels": []}
+    mock_item.model_dump.return_value = {
+        "id": "ticket-1", "name": "Test Ticket", "sequence_id": 1,
+        "project_detail": {"identifier": "TEST"}, "state_detail": {"name": "In Progress"},
+        "priority": "high", "description_html": "<p>Desc</p>", "labels": []
+    }
     
     mock_client.work_items.retrieve.return_value = mock_item
     
@@ -113,7 +117,11 @@ def test_read_ticket_with_comments(mock_get_context, resolver, mock_client):
     mock_item.priority = "high"
     mock_item.description_html = "<p>Desc</p>"
     mock_item.labels = []
-    mock_item.model_dump.return_value = {"id": "ticket-1", "name": "Test Ticket", "sequence_id": 1, "project_detail": {"identifier": "TEST"}, "state_detail": {"name": "In Progress"}, "priority": "high", "description_html": "<p>Desc</p>", "labels": []}
+    mock_item.model_dump.return_value = {
+        "id": "ticket-1", "name": "Test Ticket", "sequence_id": 1,
+        "project_detail": {"identifier": "TEST"}, "state_detail": {"name": "In Progress"},
+        "priority": "high", "description_html": "<p>Desc</p>", "labels": []
+    }
     
     mock_client.work_items.retrieve.return_value = mock_item
     

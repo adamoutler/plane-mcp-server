@@ -117,19 +117,23 @@ def mcp_error_boundary(func: T) -> T:
                 except ImportError:
                     pass
                 
-                error_msg = f"Error executing tool '{func.__name__}': {str(e)}"
+                error_msg = str(e)
+                result: dict[str, Any] = {
+                    "tool": func.__name__,
+                    "error": error_msg,
+                }
                 if not is_handled:
-                    error_msg += f"\n\nDetails: {error_details}"
+                    result["details"] = error_details
                 
                 # Try to determine return type safely
                 try:
                     sig = inspect.signature(func)
                     if sig.return_annotation is list or str(sig.return_annotation).startswith("list"):
-                        return [{"error": error_msg}]
+                        return [result]
                 except Exception:
                     pass
                     
-                return {"error": error_msg}
+                return result
             except Exception as inner_e:
                 # Absolute fallback if error handling itself fails
                 return {

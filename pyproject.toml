@@ -19,6 +19,7 @@ dependencies = [
     "PyJWT>=2.12.0",
     "authlib>=1.6.9",
     "markdownify>=0.14.1",
+    "pyyaml>=6.0",
     "nh3>=0.2.17",
     # pydocket 0.16.6 (pinned by fastmcp 2.14.4) imports `FakeConnection` from
     # `fakeredis.aioredis`, which was removed in fakeredis 2.35.0.

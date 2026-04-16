@@ -1,6 +1,7 @@
 import asyncio
 import os
 import uuid
+
 import pytest
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
