@@ -100,10 +100,8 @@ def main() -> None:
         sse_well_known = sse_mcp.auth.get_well_known_routes(mcp_path="/sse")
 
         # --- AGENT JOURNEY API ---
-        from plane_mcp.journey.server import (
-            get_header_mcp as journey_get_header_mcp,
-            get_oauth_mcp as journey_get_oauth_mcp
-        )
+        from plane_mcp.journey.server import get_header_mcp as journey_get_header_mcp
+        from plane_mcp.journey.server import get_oauth_mcp as journey_get_oauth_mcp
         journey_oauth_mcp = journey_get_oauth_mcp("/agent")
         journey_oauth_app = journey_oauth_mcp.http_app(stateless_http=True)
         

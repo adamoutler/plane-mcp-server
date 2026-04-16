@@ -34,6 +34,8 @@ def get_cached_workspace_context(cache_ttl_seconds: int = 300) -> dict:
                 response = ctx.client.projects.list(workspace_slug=ctx.workspace_slug)
                 
                 projects = []
+                states_by_project = {}
+                labels_by_project = {}
                 
                 for p in response.results:
                     proj_dict = {
@@ -52,6 +54,12 @@ def get_cached_workspace_context(cache_ttl_seconds: int = 300) -> dict:
                         proj_dict["labels"] = [label.name for label in label_res.results if label.name]
                     except Exception:
                         proj_dict["labels"] = []
+                        
+                    try:
+                        cycle_res = ctx.client.cycles.list(workspace_slug=ctx.workspace_slug, project_id=p.id)
+                        proj_dict["cycles"] = [cycle.name for cycle in cycle_res.results if cycle.name]
+                    except Exception:
+                        proj_dict["cycles"] = []
                         
                     projects.append(proj_dict)
                 

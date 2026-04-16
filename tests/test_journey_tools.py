@@ -36,12 +36,10 @@ def test_update_ticket_occ_success(mock_get_context, resolver, mock_client):
     mock_client.work_items._get.return_value = current_ticket
     
     # Mock update
-    mock_client.work_items.update.return_value = {
-        "id": "ticket-1", "name": "New Title", "sequence_id": 1, "project_detail": {"identifier": "ENG"}
-    }
+    mock_client.work_items.update.return_value = {"id": "ticket-1", "name": "New Title", "sequence_id": 1, "project_detail": {"identifier": "ENG"}}
     
     # Run update
-    _ = journey.update_ticket(
+    result = journey.update_ticket(
         "ENG-1",
         replace_text="New Description",
         replace_target_snippet="<p>Old Description</p>",
@@ -64,7 +62,7 @@ def test_update_ticket_append(mock_get_context, resolver, mock_client):
     current_ticket = {"id": "ticket-1", "name": "Title", "description_html": "<p>Old Description</p>"}
     mock_client.work_items._get.return_value = current_ticket
 
-    _ = journey.update_ticket(
+    result = journey.update_ticket(
         ticket_id="TEST-1",
         append_text="Appended Text"
     )
@@ -94,9 +92,7 @@ def test_begin_work_batch(mock_get_context, resolver, mock_client):
     mock_client.cycles.create.return_value = new_cycle
     
     # Pre-populate state cache for "In Progress"
-    plane_mcp.resolver._GLOBAL_STATE_CACHE.setdefault("test-workspace", {}).update(
-        {"proj-1": {"in progress": "state-ip"}}
-    )
+    plane_mcp.resolver._GLOBAL_STATE_CACHE.setdefault("test-workspace", {}).update({"proj-1": {"in progress": "state-ip"}})
     plane_mcp.resolver._CACHE_LAST_UPDATED.setdefault("test-workspace", {})["states"] = time.time()
     
     journey = WorkflowJourney(resolver)

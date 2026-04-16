@@ -64,9 +64,7 @@ def _hydrate_state(data: dict[str, Any], project_identifier: str | None = None) 
                 proj_id = str(resolver.resolve_project(project_identifier))
                 
             if proj_id:
-                state_obj = client.states.retrieve(
-                    workspace_slug=workspace_slug, project_id=proj_id, state_id=state_str
-                )
+                state_obj = client.states.retrieve(workspace_slug=workspace_slug, project_id=proj_id, state_id=state_str)
                 data["state"] = {"name": state_obj.name, "id": state_str}
         except Exception as e:
             logger.debug("Could not hydrate state %s: %s", state_str, e)
@@ -76,9 +74,7 @@ def _clean_html(html_str: str) -> str:
         return ""
     return markdownify(html_str, heading_style="ATX", bullet_list_marker="-").strip()
 
-def _apply_lod_to_dict(
-    data: dict[str, Any], profile: LODProfile, project_identifier: str | None = None
-) -> dict[str, Any]:
+def _apply_lod_to_dict(data: dict[str, Any], profile: LODProfile, project_identifier: str | None = None) -> dict[str, Any]:
     inject_sequence_id(data, project_identifier)
     _hydrate_state(data, project_identifier)
     
@@ -86,9 +82,11 @@ def _apply_lod_to_dict(
     if profile == LODProfile.SUMMARY:
         for key, value in data.items():
             if key in SUMMARY_FIELDS:
-                out_key = "issue_key" if key == "ticket_id" else key
+                out_key = "key" if key == "ticket_id" else key
                 if key == "state" and isinstance(value, dict) and "name" in value:
                     result[out_key] = value["name"]
+                elif key == "assignees" and isinstance(value, list):
+                    result[out_key] = [a.get("id") if isinstance(a, dict) else str(a) for a in value]
                 else:
                     result[out_key] = value
                     
@@ -97,13 +95,14 @@ def _apply_lod_to_dict(
             result["state"] = data["state_detail"]["name"]
 
         if "ticket_id" in data:
-            result["issue_key"] = data["ticket_id"]
+            result["key"] = data["ticket_id"]
             
     elif profile == LODProfile.STANDARD:
-        # Standard: Default ticket read fields (issue_key, Name, Details, priority, labels, state)
-
+        # Standard: Default ticket read fields (Key, Name, Details, priority, labels, state)
+        
+        # Priority mapping
         if "ticket_id" in data:
-            result["issue_key"] = data["ticket_id"]
+            result["ticket_id"] = data["ticket_id"]
         if "name" in data:
             result["name"] = data["name"]
         
@@ -115,6 +114,9 @@ def _apply_lod_to_dict(
             
         if "priority" in data:
             result["priority"] = data["priority"]
+            
+        if "assignees" in data and isinstance(data["assignees"], list):
+            result["assignees"] = [a.get("id") if isinstance(a, dict) else str(a) for a in data["assignees"]]
             
         if "labels" in data and isinstance(data["labels"], list):
             result["labels"] = [
@@ -138,9 +140,6 @@ def _apply_lod_to_dict(
         if "description_html" in result and isinstance(result["description_html"], str):
             result["description"] = _clean_html(result["description_html"])
             del result["description_html"]
-        # Alias the internal ticket_id intermediate to the canonical issue_key
-        if "ticket_id" in result:
-            result["issue_key"] = result.pop("ticket_id")
             
     return result
 
@@ -168,9 +167,7 @@ def apply_lod(
     if isinstance(data, list):
         filtered_data = [
             _apply_lod_to_dict(
-                item.model_dump(mode='json') if hasattr(item, "model_dump") else (
-                    item.dict() if hasattr(item, "dict") else item
-                ),
+                item.model_dump(mode='json') if hasattr(item, "model_dump") else (item.dict() if hasattr(item, "dict") else item),
                 profile,
                 project_identifier
             ) if hasattr(item, "model_dump") or hasattr(item, "dict") or isinstance(item, dict) else item 

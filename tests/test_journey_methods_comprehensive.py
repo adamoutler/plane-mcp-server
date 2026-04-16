@@ -67,7 +67,7 @@ def test_search_tickets_success(mock_get_context, resolver, mock_client):
     assert kwargs["params"]["per_page"] == 10  # per_page is now min(limit, 100)
     
     assert len(result["results"]) == 1
-    assert result["results"][0]["issue_key"] == "TEST-1"
+    assert result["results"][0]["key"] == "TEST-1"
     assert result["results"][0]["name"] == "Test Ticket with filter keyword"
 
 @patch('plane_mcp.journey.tools.read.get_plane_client_context')
@@ -93,7 +93,7 @@ def test_read_ticket_success(mock_get_context, resolver, mock_client):
     
     mock_client.work_items.retrieve.assert_called_once()
     
-    assert result["issue_key"] == "TEST-1"
+    assert result["ticket_id"] == "TEST-1"
     assert result["name"] == "Test Ticket"
     assert result["description"] == "Desc"
 
@@ -131,7 +131,7 @@ def test_read_ticket_with_comments(mock_get_context, resolver, mock_client):
     mock_client.work_items.retrieve.assert_called_once()
     mock_client.work_items.comments.list.assert_called_once()
     
-    assert result["issue_key"] == "TEST-1"
+    assert result["ticket_id"] == "TEST-1"
     assert "comments" in result
     assert "2026-03-24-@Adam Outler:\nThis is a comment." in result["comments"]
 
@@ -154,7 +154,7 @@ def test_update_ticket_with_comment(mock_get_context, resolver, mock_client):
     
     result = journey.update_ticket(ticket_id="TEST-1", new_title="New Title", comment="Adding an update comment.")
     
-    assert result.get("issue_key") == "TEST-1"
+    assert result.get("key") == "TEST-1"
     
     # Verify update was called
     update_args = mock_client.work_items.update.call_args[1]
@@ -263,7 +263,7 @@ def test_create_ticket_with_all_params(mock_get_context, resolver, mock_client):
     # Verify link to cycle
     assert mock_client.cycles.add_work_items.called
     
-    assert result["issue_key"] == "TEST-99"
+    assert result["key"] == "TEST-99"
 
 
 # -------------------------------------------------------------------

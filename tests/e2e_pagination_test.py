@@ -99,7 +99,7 @@ def test_label_exception_returns_llm_friendly(e2e_journey):
     A) Label not found by name -> warning + results still returned (search broadened but warned)
     B) Label lookup throws exception -> empty results + warning (safe failure, no widening)
     """
-    _ = e2e_journey.resolver.client
+    client = e2e_journey.resolver.client
 
     # --- Mode A: label name not found (not an exception, just missing) ---
     result_a = e2e_journey.search_tickets(

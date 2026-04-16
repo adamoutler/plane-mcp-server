@@ -19,9 +19,7 @@ class JourneyBase:
     def __init__(self, resolver: EntityResolver):
         self.resolver = resolver
 
-    def apply_lod(
-        self, data: Any, profile: LODProfile = LODProfile.SUMMARY, project_identifier: str | None = None
-    ) -> Any:
+    def apply_lod(self, data: Any, profile: LODProfile = LODProfile.SUMMARY, project_identifier: str | None = None) -> Any:
         """
         Applies LOD profile, returning clean minimized data for AI context.
         """
@@ -132,7 +130,5 @@ def mcp_error_boundary(func: T) -> T:
                 return {"error": error_msg}
             except Exception as inner_e:
                 # Absolute fallback if error handling itself fails
-                return {
-                    "error": f"CRITICAL: Tool {func.__name__} failed, and error handler also crashed: {str(inner_e)}"
-                }
+                return {"error": f"CRITICAL: Tool {func.__name__} failed, and error handler also crashed: {str(inner_e)}"}
     return cast(T, wrapper)

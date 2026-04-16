@@ -284,6 +284,14 @@ def register_work_item_tools(mcp: FastMCP) -> None:
         """
         client, workspace_slug = get_plane_client_context()
 
+        # Enforce expanding fields that Pydantic expects as objects
+        required_expands = {"labels", "assignees", "state", "project", "workspace"}
+        if expand:
+            current_expands = set(e.strip() for e in expand.split(","))
+            expand = ",".join(current_expands | required_expands)
+        else:
+            expand = ",".join(required_expands)
+
         params = RetrieveQueryParams(
             expand=expand,
             fields=fields,
@@ -326,6 +334,14 @@ def register_work_item_tools(mcp: FastMCP) -> None:
             WorkItemDetail object with expanded relationships
         """
         client, workspace_slug = get_plane_client_context()
+
+        # Enforce expanding fields that Pydantic expects as objects
+        required_expands = {"labels", "assignees", "state", "project", "workspace"}
+        if expand:
+            current_expands = set(e.strip() for e in expand.split(","))
+            expand = ",".join(current_expands | required_expands)
+        else:
+            expand = ",".join(required_expands)
 
         params = RetrieveQueryParams(
             expand=expand,
@@ -468,6 +484,14 @@ def register_work_item_tools(mcp: FastMCP) -> None:
             WorkItemSearch object containing search results
         """
         client, workspace_slug = get_plane_client_context()
+
+        # Enforce expanding fields that Pydantic expects as objects
+        required_expands = {"labels", "assignees", "state", "project", "workspace"}
+        if expand:
+            current_expands = set(e.strip() for e in expand.split(","))
+            expand = ",".join(current_expands | required_expands)
+        else:
+            expand = ",".join(required_expands)
 
         params = RetrieveQueryParams(
             expand=expand,

@@ -65,16 +65,12 @@ class CreateUpdateJourney(JourneyBase):
             new_cycle = client.cycles.create(
                 workspace_slug=workspace_slug,
                 project_id=project_id,
-                data=CreateCycle(
-                    name=cycle_name, project_id=project_id, owned_by=user_id, start_date=start_dt, end_date=end_dt
-                )
+                data=CreateCycle(name=cycle_name, project_id=project_id, owned_by=user_id, start_date=start_dt, end_date=end_dt)
             )
             return new_cycle.id
         except HttpError as e:
             if getattr(e, "status_code", getattr(getattr(e, "response", None), "status_code", None)) == 400:
-                logger.warning(
-                    f"Cycles appear to be disabled for project {project_id}. Skipping cycle lookup/creation."
-                )
+                logger.warning(f"Cycles appear to be disabled for project {project_id}. Skipping cycle lookup/creation.")
                 return None
             raise
 
@@ -86,12 +82,20 @@ class CreateUpdateJourney(JourneyBase):
         state_name: str | None = None, 
         labels: list[str] | None = None, 
         cycle_name: str | None = None
-    ) -> dict:
+    ) -> str | dict:
         
         if project_slug.lower() == 'help':
             from plane_mcp.journey.cache import get_cached_workspace_context
             ctx = get_cached_workspace_context(0)
             llm_content = {"projects": ctx.get("projects", []), "priorities": ctx.get("priorities", [])}
+            display_lines = []
+            for p in llm_content.get("projects", []):
+                slug = p.get("project_slug", "UNKNOWN")
+                desc = p.get("description", "").strip() or p.get("name", "")
+                # Format exactly as requested: PROJECT_SLUG - Description
+                display_lines.append(f"{slug} - {desc}")
+            display_str = "\n".join(display_lines) if display_lines else "No projects found."
+            
             return llm_content
 
         project_id = self.resolver.resolve_project(project_slug)
@@ -130,12 +134,12 @@ class CreateUpdateJourney(JourneyBase):
             except Exception as e:
                 logger.warning("Created %s but failed to add it to cycle %s: %s", key, cycle_id, e)
                 return {
-                    "issue_key": key,
+                    "key": key,
                     "status": "warning",
                     "message": "Ticket created successfully, but adding it to the cycle failed. The ticket exists.",
                 }
 
-        return {"issue_key": key}
+        return {"key": key, "name": title}
 
     def update_ticket(
         self,
@@ -146,7 +150,7 @@ class CreateUpdateJourney(JourneyBase):
         replace_text: str | None = None,
         replace_target_snippet: str | None = None,
         comment: str | None = None
-    ) -> dict:
+    ) -> str | dict:
         work_item_id = self.resolver.resolve_ticket(ticket_id)
         project_identifier, _ = self.parse_ticket_id(ticket_id)
         project_id = self.resolver.resolve_project(project_identifier)
@@ -170,31 +174,13 @@ class CreateUpdateJourney(JourneyBase):
         
         if replace_text is not None:
             if not replace_target_snippet:
-                return {
-                    "status": "error",
-                    "message": (
-                        "You provided 'replace_text' but did not provide 'replace_target_snippet' "
-                        "to specify exactly which text to replace."
-                    )
-                }
+                return {"status": "error", "message": "You must provide 'replace_target_snippet' to specify exactly which text to replace."}
             
             occurrences = final_desc.count(replace_target_snippet)
             if occurrences == 0:
-                return {
-                    "status": "error",
-                    "message": (
-                        f"The snippet '{replace_target_snippet}' was not found in the description. "
-                        "Ensure you matched the exact text, spaces, and casing."
-                    )
-                }
+                return {"status": "error", "message": f"The snippet '{replace_target_snippet}' was not found in the description. Ensure you matched the exact text, spaces, and casing."}
             if occurrences > 1:
-                return {
-                    "status": "error",
-                    "message": (
-                        f"The snippet '{replace_target_snippet}' matched multiple times. "
-                        "Please provide a longer, more specific snippet to uniquely identify the text to replace."
-                    )
-                }
+                return {"status": "error", "message": f"The snippet '{replace_target_snippet}' matched multiple times. Please provide a longer, more specific snippet to uniquely identify the text to replace."}
                 
             final_desc = final_desc.replace(replace_target_snippet, replace_text)
             desc_changed = True
@@ -203,20 +189,11 @@ class CreateUpdateJourney(JourneyBase):
             if append_after_snippet:
                 occurrences = final_desc.count(append_after_snippet)
                 if occurrences == 0:
-                    return {
-                        "status": "error",
-                        "message": f"The snippet '{append_after_snippet}' was not found in the description. "
-                                   "Ensure you matched the exact text."
-                    }
+                    return {"status": "error", "message": f"The snippet '{append_after_snippet}' was not found in the description. Ensure you matched the exact text."}
                 if occurrences > 1:
-                    return {
-                        "status": "error",
-                        "message": f"The snippet '{append_after_snippet}' matched multiple times. "
-                                   "Please provide a longer snippet."
-                    }
+                    return {"status": "error", "message": f"The snippet '{append_after_snippet}' matched multiple times. Please provide a longer snippet."}
                 
-                final_desc = final_desc.replace(append_after_snippet, 
-                                                f"{append_after_snippet}<br><br>{append_text}")
+                final_desc = final_desc.replace(append_after_snippet, f"{append_after_snippet}<br><br>{append_text}")
             else:
                 if final_desc:
                     final_desc = f"{final_desc}<br><br>{append_text}"
@@ -250,9 +227,10 @@ class CreateUpdateJourney(JourneyBase):
         if not title_changed and not desc_changed and not comment:
             return {"status": "warning", "message": "No changes were provided to update_ticket."}
             
-        return {"issue_key": ticket_id, "status": "success", "message": "Ticket updated successfully."}
+        return {"key": ticket_id, "status": "success", "message": "Ticket updated successfully."}
 
 def register_create_update_tools(mcp: FastMCP) -> None:
+    from plane_mcp.journey.formatters import format_create_ticket, format_update_ticket, with_emojification
     def create_ticket(
         title: str,
         project_slug: str,
@@ -260,16 +238,15 @@ def register_create_update_tools(mcp: FastMCP) -> None:
         state_name: str | None = None,
         labels: list[str] | None = None,
         cycle_name: str | None = None,
-    ) -> dict:
+    ) -> str | dict:
         client, workspace_slug = get_plane_client_context()
         resolver = EntityResolver(client, workspace_slug)
         journey = CreateUpdateJourney(resolver)
-        raw_data = journey.create_ticket(title=title, project_slug=project_slug, description=description, 
-                                         state_name=state_name, labels=labels, cycle_name=cycle_name)
+        raw_data = journey.create_ticket(title=title, project_slug=project_slug, description=description, state_name=state_name, labels=labels, cycle_name=cycle_name)
         
         if project_slug.lower() == 'help':
             return raw_data
-
+            
         return raw_data
 
     create_ticket.__doc__ = """
@@ -279,16 +256,16 @@ def register_create_update_tools(mcp: FastMCP) -> None:
 
         Args:
             title: Title of the ticket.
-            project_slug: The Plane project identifier (e.g., 'PLANE'). To discover valid project slugs, 
-                call this tool with project_slug='help'.
+            project_slug: The Plane project identifier (e.g., 'PLANE'). To discover valid project slugs, call this tool with project_slug='help'.
             description: Optional detailed markdown description of the ticket.
             state_name: Optional initial state name (e.g., 'Todo', 'In Progress'). Defaults to Backlog.
             labels: List of label names.
             cycle_name: Name of the cycle to add this ticket to.
         """
-    create_ticket = mcp.tool()(mcp_error_boundary(create_ticket))
+    create_ticket = mcp.tool()(with_emojification(format_create_ticket)(mcp_error_boundary(create_ticket)))
 
     @mcp.tool()
+    @with_emojification(format_update_ticket)
     @mcp_error_boundary
     def update_ticket(
         ticket_id: str,
@@ -298,7 +275,7 @@ def register_create_update_tools(mcp: FastMCP) -> None:
         replace_text: str | None = None,
         replace_target_snippet: str | None = None,
         comment: str | None = None
-    ) -> dict:
+    ) -> str | dict:
         """
         Update a ticket's title, description, or add a comment. Features smart targeting to avoid JSON escaping errors.
         
@@ -306,8 +283,7 @@ def register_create_update_tools(mcp: FastMCP) -> None:
             ticket_id: The globally unique, human-readable identifier (e.g., ENG-123).
             new_title: Completely replaces the ticket title.
             append_text: Text to append to the description.
-            append_after_snippet: If populated, 'append_text' will be inserted immediately after this exact snippet. 
-                If blank, 'append_text' is added to the very end of the description.
+            append_after_snippet: If populated, 'append_text' will be inserted immediately after this exact snippet. If blank, 'append_text' is added to the very end of the description.
             replace_text: The new text that will replace a snippet.
             replace_target_snippet: The exact existing text to replace. Required if 'replace_text' is used.
             comment: Adds a new comment to the ticket thread.
@@ -315,8 +291,12 @@ def register_create_update_tools(mcp: FastMCP) -> None:
         client, workspace_slug = get_plane_client_context()
         resolver = EntityResolver(client, workspace_slug)
         journey = CreateUpdateJourney(resolver)
-        raw_data = journey.update_ticket(
-            ticket_id, new_title, append_text, append_after_snippet, replace_text, replace_target_snippet, comment
-        )
+        raw_data = journey.update_ticket(ticket_id, new_title, append_text, append_after_snippet, replace_text, replace_target_snippet, comment)
         
+        if raw_data.get("status") == "error":
+            return raw_data
+            
+        if raw_data.get("status") == "warning":
+            return raw_data
+            
         return raw_data

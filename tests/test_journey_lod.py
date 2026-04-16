@@ -45,8 +45,8 @@ def test_lod_summary_profile(mock_issue):
     """Test that summary profile strips everything down to essential AI context."""
     result = apply_lod(mock_issue, profile=LODProfile.SUMMARY)
 
-    # Check that sequence ID was injected to form issue_key
-    assert result.get("issue_key") == "ENG-123"    
+    # Check that sequence ID was injected to form key
+    assert result.get("key") == "ENG-123"    
     # Check essential fields are present
     assert "id" not in result
     assert result.get("name") == "Test Issue"
@@ -67,7 +67,7 @@ def test_lod_standard_profile(mock_issue):
     """Test that standard profile keeps most fields but drops verbose ones."""
     result = apply_lod(mock_issue, profile=LODProfile.STANDARD)
     
-    assert result.get("issue_key") == "ENG-123"
+    assert result.get("ticket_id") == "ENG-123"
     assert "id" not in result
     assert "extra_verbose_field" not in result
     assert result.get("name") == "Test Issue"
@@ -99,7 +99,7 @@ def test_apply_lod_list(mock_issue):
     
     assert len(results) == 2
     for result in results:
-        assert result.get("issue_key") == "ENG-123"
+        assert result.get("key") == "ENG-123"
         assert "created_at" not in result
 
 
@@ -109,7 +109,7 @@ def test_journey_base_apply_lod(mock_issue):
     base = JourneyBase(resolver=resolver)
     
     result = base.apply_lod(mock_issue, profile=LODProfile.SUMMARY)
-    assert result.get("issue_key") == "ENG-123"
+    assert result.get("key") == "ENG-123"
     assert "created_at" not in result
 
 
@@ -142,7 +142,7 @@ def test_with_lod_decorator(mock_issue):
     
     result = journey.get_ticket(ticket_id="ENG-123")
     
-    assert result.get("issue_key") == "ENG-123"
+    assert result.get("key") == "ENG-123"
     assert "created_at" not in result
 
 

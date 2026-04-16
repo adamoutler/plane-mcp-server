@@ -23,7 +23,7 @@ class ReadJourney(JourneyBase):
         limit: int = 50, 
         cursor: str | None = None, 
         lod: Literal["summary", "standard", "full"] = "standard"
-    ) -> dict:
+    ) -> str | dict:
         import json
         
         
@@ -31,7 +31,12 @@ class ReadJourney(JourneyBase):
             from plane_mcp.journey.cache import get_cached_workspace_context
             opts = get_cached_workspace_context(0).copy()
             llm_content = {"projects": opts.get("projects", []), "priorities": opts.get("priorities", [])}
-
+            display_lines = []
+            for p in llm_content.get("projects", []):
+                slug = p.get("project_slug", "UNKNOWN")
+                desc = p.get("description", "").strip() or p.get("name", "")
+                display_lines.append(f"{slug} - {desc}")
+            display_str = "\n".join(display_lines) if display_lines else "No projects found."
             
             return llm_content
 
@@ -76,10 +81,7 @@ class ReadJourney(JourneyBase):
                     "results": [],
                     "next_cursor": None,
                     "prev_cursor": None,
-                    "warnings": [
-                        f"Label filter could not be applied due to an error: {e}. "
-                        "Please retry or check your label names."
-                    ],
+                    "warnings": [f"Label filter could not be applied due to an error: {e}. Please retry or check your label names."],
                 }
                 
         if assignees:
@@ -92,6 +94,8 @@ class ReadJourney(JourneyBase):
                             assignee_ids.append(me.id)
                     except Exception:
                         pass
+                else:
+                    assignee_ids.append(a)
             if assignee_ids:
                 query_params["assignees"] = ",".join(assignee_ids)
                 
@@ -151,9 +155,7 @@ class ReadJourney(JourneyBase):
             result["warnings"] = [f"Label not found and filter was skipped: {', '.join(unresolved_labels)}"]
         return result
 
-    def read_ticket(
-        self, ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False
-    ) -> dict:
+    def read_ticket(self, ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False) -> str | dict:
         work_item_id = self.resolver.resolve_ticket(ticket_id)
         project_identifier, _issue_sequence = self.parse_ticket_id(ticket_id)
         project_id = self.resolver.resolve_project(project_identifier)
@@ -190,9 +192,7 @@ class ReadJourney(JourneyBase):
                     username = "user"
                     # Try to extract the best available identifier
                     if hasattr(c, 'actor_detail') and c.actor_detail:
-                        username = getattr(
-                            c.actor_detail, 'display_name', getattr(c.actor_detail, 'username', username)
-                        )
+                        username = getattr(c.actor_detail, 'display_name', getattr(c.actor_detail, 'username', username))
                     elif hasattr(c, 'actor') and c.actor:
                         username = str(c.actor)
                         
@@ -209,18 +209,19 @@ class ReadJourney(JourneyBase):
 
 
 def register_read_tools(mcp: FastMCP) -> None:
-    
+    from plane_mcp.journey.formatters import format_read_ticket, format_search_tickets, with_emojification
+
     def search_tickets(
-        project_slug: str, 
-        query: str | None = None, 
-        labels: list[str] | None = None, 
-        priority: list[str] | None = None, 
-        states: list[str] | None = None, 
-        assignees: list[str] | None = None, 
-        limit: int = 50, 
-        cursor: str | None = None, 
+        project_slug: str,
+        query: str | None = None,
+        labels: list[str] | None = None,
+        priority: list[str] | None = None,
+        states: list[str] | None = None,
+        assignees: list[str] | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
         lod: Literal["summary", "standard", "full"] = "standard"
-    ) -> dict:
+    ) -> str:
         client, workspace_slug = get_plane_client_context()
         resolver = EntityResolver(client, workspace_slug)
         journey = ReadJourney(resolver)
@@ -228,13 +229,30 @@ def register_read_tools(mcp: FastMCP) -> None:
         
         if project_slug.lower() == 'help':
             return raw_data
-
-        # Strip HTML tags from description fields in-place for clean human+machine output
+            
         import re
-        _html_re = re.compile(r'<[^>]+')
+        def strip_html_markdown(text: str) -> str:
+            if not text:
+                return ""
+            text = re.sub(r'<[^>]+>', '', text)
+            return " ".join(text.split())
+
+        formatted_str = []
         for item in raw_data.get("results", []):
-            if item.get("description"):
-                item["description"] = " ".join(_html_re.sub('', item["description"]).split()).strip()
+            slug = item.get("ticket_id", item.get("key", "UNKNOWN"))
+            title = item.get("name", "Untitled")
+            desc = item.get("description", "")
+            
+            clean_desc = strip_html_markdown(desc)
+            if len(clean_desc) > 80:
+                snippet = clean_desc[:80] + "..."
+            else:
+                snippet = clean_desc
+            
+            if snippet:
+                formatted_str.append(f"{slug} {title}\n{snippet}")
+            else:
+                formatted_str.append(f"{slug} {title}")
 
         return raw_data
 
@@ -243,8 +261,7 @@ def register_read_tools(mcp: FastMCP) -> None:
         If the desired result is not in the current page, call again with the provided next_cursor.
 
         Args:
-            project_slug: The Plane project identifier (e.g., 'PLANE' or 'TEST'). To discover valid project slugs, 
-                states, and labels, call this tool with project_slug='help'.
+            project_slug: The Plane project identifier (e.g., 'PLANE' or 'TEST'). To discover valid project slugs, states, and labels, call this tool with project_slug='help'.
             query: Free-form text search query.
             labels: List of label names to filter by (e.g., ['bug', 'feature']).
             priority: List of priorities to filter by (e.g., ['urgent', 'high', 'medium', 'low', 'none']).
@@ -254,19 +271,17 @@ def register_read_tools(mcp: FastMCP) -> None:
             cursor: Pagination cursor for getting the next set of results.
             lod: Level of Detail profile ("summary", "standard", or "full"). Default is "standard".
         """
-    search_tickets = mcp.tool()(mcp_error_boundary(search_tickets))
+    search_tickets = mcp.tool()(with_emojification(format_search_tickets)(mcp_error_boundary(search_tickets)))
 
     @mcp.tool()
+    @with_emojification(format_read_ticket)
     @mcp_error_boundary
-    def read_ticket(
-        ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False
-    ) -> dict:
+    def read_ticket(ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False) -> str | dict:
         """
         Read the details of a single ticket.
 
         Args:
-            ticket_id: The globally unique, human-readable identifier (e.g., ENG-123). The system automatically 
-                resolves the project and issue routing from this prefix.
+            ticket_id: The globally unique, human-readable identifier (e.g., ENG-123). The system automatically resolves the project and issue routing from this prefix.
             lod: Level of Detail profile ("summary", "standard", "full"). Default is "standard".
             comments: If true, fetches and appends the ticket's comments to the result.
         """
@@ -275,9 +290,21 @@ def register_read_tools(mcp: FastMCP) -> None:
         journey = ReadJourney(resolver)
         raw_data = journey.read_ticket(ticket_id, lod, comments)
 
-        # Strip HTML tags from description, preserving newlines and Markdown structure
         import re
-        if raw_data.get("description"):
-            raw_data["description"] = re.sub(r'<[^>]+>', '', raw_data["description"]).strip()
+        def clean_description_for_read(text: str) -> str:
+            if not text:
+                return ""
+            # Only strip HTML tags, preserve newlines and Markdown
+            return re.sub(r'<[^>]+>', '', text).strip()
+
+        slug = raw_data.get("ticket_id", raw_data.get("key", ticket_id))
+        title = raw_data.get("name", "Untitled")
+        desc = raw_data.get("description", "")
+
+        clean_desc = clean_description_for_read(desc)
+
+        returnDisplay = f"{slug} {title}\n\n{clean_desc}"
+        if "comments" in raw_data:
+            returnDisplay += "\n\nComments:\n" + raw_data["comments"]
 
         return raw_data

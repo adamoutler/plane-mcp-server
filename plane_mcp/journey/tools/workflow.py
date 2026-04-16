@@ -52,7 +52,7 @@ class WorkflowJourney(JourneyBase):
                 return None
             raise
 
-    def transition_ticket(self, ticket_id: str, state_name: str) -> dict:
+    def transition_ticket(self, ticket_id: str, state_name: str) -> str | dict:
         work_item_id = self.resolver.resolve_ticket(ticket_id)
         project_identifier, _ = self.parse_ticket_id(ticket_id)
         project_id = self.resolver.resolve_project(project_identifier)
@@ -69,7 +69,7 @@ class WorkflowJourney(JourneyBase):
         
         return self.apply_lod(updated, profile=LODProfile.SUMMARY, project_identifier=project_identifier)
 
-    def begin_work(self, ticket_ids: list[str], cycle_name: str) -> dict:
+    def begin_work(self, ticket_ids: list[str], cycle_name: str) -> str | dict:
         """Batch operation to add multiple tickets to a cycle and potentially transition them."""
         client, workspace_slug = get_plane_client_context()
         
@@ -98,9 +98,7 @@ class WorkflowJourney(JourneyBase):
                     )
                     msg += f" Added to cycle '{cycle_name}'."
                 except Exception as e:
-                    logger.warning(
-                        "Failed to add tickets to cycle '%s' for project %s: %s", cycle_name, proj_identifier, e
-                    )
+                    logger.warning("Failed to add tickets to cycle '%s' for project %s: %s", cycle_name, proj_identifier, e)
                     msg += f" Warning: tickets processed but could not be added to cycle '{cycle_name}'."
             else:
                 msg += " Note: Cycles are disabled for this project, skipped cycle assignment."
@@ -124,9 +122,9 @@ class WorkflowJourney(JourneyBase):
                 
             results[proj_identifier] = msg
             
-        return {"status": "success", "details": results}
+        return {"status": "success", "ticket_ids": ticket_ids, "details": results}
 
-    def complete_work(self, ticket_id: str, comment: str) -> dict:
+    def complete_work(self, ticket_id: str, comment: str) -> str | dict:
         work_item_id = self.resolver.resolve_ticket(ticket_id)
         project_identifier, _ = self.parse_ticket_id(ticket_id)
         project_id = self.resolver.resolve_project(project_identifier)
@@ -161,17 +159,17 @@ class WorkflowJourney(JourneyBase):
 
             return self.apply_lod(updated, profile=LODProfile.SUMMARY, project_identifier=project_identifier)
             
-        return {
-            "status": "partial",
-            "message": (
-                "No workflow states found indicating a 'Done' or 'Completed' state found. "
-                "Call transition_ticket explicitly to close this ticket."
-            )
-        }
+        return {"status": "partial", "message": "Comment added, but no 'Done' or 'Completed' state found. Call transition_ticket explicitly to close this ticket."}
 
 
 def register_workflow_tools(mcp: FastMCP) -> None:
-    def transition_ticket(ticket_id: str, state_name: str) -> dict:
+    from plane_mcp.journey.formatters import (
+        format_begin_work,
+        format_complete_work,
+        format_transition_ticket,
+        with_emojification,
+    )
+    def transition_ticket(ticket_id: str, state_name: str) -> str | dict:
         client, workspace_slug = get_plane_client_context()
         resolver = EntityResolver(client, workspace_slug)
         journey = WorkflowJourney(resolver)
@@ -179,26 +177,25 @@ def register_workflow_tools(mcp: FastMCP) -> None:
         
     transition_ticket.__doc__ = """
         Transition a ticket to a new state.
-        Use this primitive for granular edge-case routing, such as moving a ticket to Canceled, 
-        Duplicate, or custom review states.
+        Use this primitive for granular edge-case routing, such as moving a ticket to Canceled, Duplicate, or custom review states.
         
         Args:
             ticket_id: The globally unique, human-readable identifier (e.g., ENG-123).
             state_name: The name of the state to transition to (e.g. 'In Progress').
         """
-    transition_ticket = mcp.tool()(mcp_error_boundary(transition_ticket))
+    transition_ticket = mcp.tool()(with_emojification(format_transition_ticket)(mcp_error_boundary(transition_ticket)))
 
     @mcp.tool()
+    @with_emojification(format_begin_work)
     @mcp_error_boundary
-    def begin_work(ticket_ids: list[str], cycle_name: str) -> dict:
+    def begin_work(ticket_ids: list[str], cycle_name: str) -> str | dict:
         """
         Add multiple tickets to a cycle (creating it if missing) and attempt to transition them to 'In Progress'.
         Supports batch operations across multiple tickets and potentially multiple projects.
         Use this macro as your primary method for standard workflow progression (starting work).
         
         Args:
-            ticket_ids: List of globally unique, human-readable identifiers (e.g. ['ENG-123', 'ENG-124']). 
-                The system automatically resolves the project and issue routing from these prefixes.
+            ticket_ids: List of globally unique, human-readable identifiers (e.g. ['ENG-123', 'ENG-124']). The system automatically resolves the project and issue routing from these prefixes.
             cycle_name: The name of the cycle to add tickets to. If you are unsure, make your best logical guess.
         """
         client, workspace_slug = get_plane_client_context()
@@ -207,16 +204,15 @@ def register_workflow_tools(mcp: FastMCP) -> None:
         return journey.begin_work(ticket_ids, cycle_name)
 
     @mcp.tool()
+    @with_emojification(format_complete_work)
     @mcp_error_boundary
-    def complete_work(ticket_id: str, comment: str) -> dict:
+    def complete_work(ticket_id: str, comment: str) -> str | dict:
         """
         Add a completion comment to a ticket and attempt to transition it to a 'Done' or 'Completed' state.
         Use this macro as your primary method for standard workflow progression (finishing work).
         
         Args:
-            ticket_id: The globally unique, human-readable identifier (e.g., ENG-123). The system 
-                automatically resolves the project and issue routing from this prefix; no separate 
-                project context is needed.
+            ticket_id: The globally unique, human-readable identifier (e.g., ENG-123). The system automatically resolves the project and issue routing from this prefix; no separate project context is needed.
             comment: The text to add as a comment.
         """
         client, workspace_slug = get_plane_client_context()
