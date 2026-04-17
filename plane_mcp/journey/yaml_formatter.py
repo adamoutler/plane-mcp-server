@@ -81,7 +81,10 @@ def _clean_and_convert(obj: Any) -> Any:
         return cleaned
     elif isinstance(obj, list):
         cleaned_list = [_clean_and_convert(v) for v in obj]
-        return FlowList(cleaned_list)
+        is_primitive = all(not isinstance(item, (dict, list)) for item in cleaned_list)
+        if is_primitive:
+            return FlowList(cleaned_list)
+        return cleaned_list
     return obj
 
 
