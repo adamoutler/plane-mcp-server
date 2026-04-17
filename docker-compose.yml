@@ -6,10 +6,15 @@ services:
     restart: unless-stopped
     ports:
       - "${FASTMCP_PORT:-8211}:${FASTMCP_PORT:-8211}"
+    env_file:
+      - .env.test.docker
     environment:
       - PLANE_API_KEY=${PLANE_API_KEY}
       - PLANE_WORKSPACE_SLUG=${PLANE_WORKSPACE_SLUG}
       - PLANE_BASE_URL=${PLANE_BASE_URL}
+      - PLANE_OAUTH_PROVIDER_CLIENT_ID=${PLANE_OAUTH_PROVIDER_CLIENT_ID:-dummy}
+      - PLANE_OAUTH_PROVIDER_CLIENT_SECRET=${PLANE_OAUTH_PROVIDER_CLIENT_SECRET:-dummy}
+      - PLANE_OAUTH_PROVIDER_BASE_URL=${PLANE_OAUTH_PROVIDER_BASE_URL:-http://localhost:8211/mcp/http}
       - FASTMCP_PORT=${FASTMCP_PORT:-8211}
       - REDIS_HOST=redis
       - REDIS_PORT=6379

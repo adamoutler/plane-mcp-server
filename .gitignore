@@ -55,4 +55,5 @@ dmypy.json
 .env.test.local
 
 # Ignore cursor AI rules
-.cursor/rules/codacy.mdc
+.cursor/rules/codacy.mdc.Gemini
+.gemini

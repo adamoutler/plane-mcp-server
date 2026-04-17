@@ -169,7 +169,7 @@ def register_workflow_tools(mcp: FastMCP) -> None:
         format_transition_ticket,
         with_emojification,
     )
-    def transition_ticket(ticket_id: str, state_name: str) -> str | dict:
+    def transition_ticket(ticket_id: str, state_name: str) -> str:
         client, workspace_slug = get_plane_client_context()
         resolver = EntityResolver(client, workspace_slug)
         journey = WorkflowJourney(resolver)
@@ -188,7 +188,7 @@ def register_workflow_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     @with_emojification(format_begin_work)
     @mcp_error_boundary
-    def begin_work(ticket_ids: list[str], cycle_name: str) -> str | dict:
+    def begin_work(ticket_ids: list[str], cycle_name: str) -> str:
         """
         Add multiple tickets to a cycle (creating it if missing) and attempt to transition them to 'In Progress'.
         Supports batch operations across multiple tickets and potentially multiple projects.
@@ -206,7 +206,7 @@ def register_workflow_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     @with_emojification(format_complete_work)
     @mcp_error_boundary
-    def complete_work(ticket_id: str, comment: str) -> str | dict:
+    def complete_work(ticket_id: str, comment: str) -> str:
         """
         Add a completion comment to a ticket and attempt to transition it to a 'Done' or 'Completed' state.
         Use this macro as your primary method for standard workflow progression (finishing work).

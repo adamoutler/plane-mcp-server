@@ -276,7 +276,7 @@ def register_read_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     @with_emojification(format_read_ticket)
     @mcp_error_boundary
-    def read_ticket(ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False) -> str | dict:
+    def read_ticket(ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False) -> str:
         """
         Read the details of a single ticket.
 

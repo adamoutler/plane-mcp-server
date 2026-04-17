@@ -21,14 +21,15 @@ def with_emojification(formatter_func):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            import json
             raw_data = func(*args, **kwargs)
             
             # We only emojify dicts (which represents structured JSON)
             if not isinstance(raw_data, dict):
-                return raw_data
+                return str(raw_data)
                 
             if "llmContent" in raw_data and "returnDisplay" in raw_data:
-                return raw_data
+                return json.dumps(raw_data, indent=2)
                 
             try:
                 # The formatter_func handles the specific logic for this tool's output
@@ -36,24 +37,40 @@ def with_emojification(formatter_func):
                 
                 # If the formatter intentionally returns None or empty, skip emojification
                 if not human_text:
-                    return raw_data
+                    return json.dumps(raw_data, indent=2)
 
-                return {
-                    "llmContent": raw_data,
-                    "returnDisplay": human_text
-                }
+                return human_text
 
             except Exception as e:
                 # Fallthrough to raw JSON on error (the "happy path only" rule)
                 logger.debug("Emojification skipped due to error: %s", e)
-                return raw_data
+                return json.dumps(raw_data, indent=2)
                 
         return wrapper
     return decorator
 
 
 def format_help(data: dict) -> str:
-    return "Options loaded successfully."
+    projects = data.get("projects", [])
+    priorities = data.get("priorities", [])
+    
+    lines = []
+    for p in projects:
+        slug = p.get("project_slug", "UNKNOWN")
+        name = p.get("name", "")
+        states = ",".join(p.get("states", []))
+        labels = ",".join(p.get("labels", []))
+        
+        line = f"📁{slug}({name}) 🔄{states}"
+        if labels:
+            line += f" 🏷️{labels}"
+        lines.append(line)
+        
+    if priorities:
+        lines.append(f"⚡{','.join(priorities)}")
+        
+    lines.append("\nField Definitions:\nPriority: 🚨urgent ⏫high 🔼medium 🔽low ➖none\nStatus: ⚫Backlog 🟣Todo 🔵In Progress 🟢Done 🔴Cancelled 🟡delayed")
+    return "\n".join(lines)
 
 
 def format_create_ticket(data: dict) -> str:
@@ -82,8 +99,10 @@ def format_update_ticket(data: dict) -> str:
     return f"✅ Ticket {key} updated successfully."
 
 
-def get_priority_emoji(priority: str) -> str:
-    priority = (priority or "none").lower()
+def get_priority_emoji(priority: str | dict) -> str:
+    if isinstance(priority, dict):
+        priority = priority.get("name", "")
+    priority = str(priority or "").lower()
     mapping = {
         "urgent": "🚨",
         "high": "⏫",
@@ -93,8 +112,10 @@ def get_priority_emoji(priority: str) -> str:
     }
     return mapping.get(priority, "➖")
 
-def get_state_emoji(state: str) -> str:
-    state = (state or "").lower()
+def get_state_emoji(state: str | dict) -> str:
+    if isinstance(state, dict):
+        state = state.get("name", "")
+    state = str(state or "").lower()
     # Unique colored circles per state
     mapping = {
         "backlog": "⚫",
@@ -127,38 +148,56 @@ def format_search_tickets(data: dict) -> str:
     for t in results:
         key = t.get("ticket_id") or t.get("key", "UNKNOWN")
         name = t.get("name", "Untitled")
-        desc = t.get("description", t.get("description_html", ""))
+        state = t.get("state", "None")
+        priority = t.get("priority", "none")
         
-        desc_clean = clean_markdown_escapes(str(desc))
-        desc_clean = re.sub(r'<[^>]+>', '', desc_clean)
-        desc_clean = " ".join(desc_clean.split())
+        state_emoji = get_state_emoji(state)
+        priority_emoji = get_priority_emoji(priority)
+            
+        lines.append(f"{state_emoji}{priority_emoji}{key} {name}")
         
-        if len(desc_clean) > 80:
-            snippet = desc_clean[:80] + "..."
-        else:
-            snippet = desc_clean
+    if data.get("next_cursor"):
+        lines.append(f"⏭️{data['next_cursor']}")
+    if data.get("prev_cursor"):
+        lines.append(f"⏮️{data['prev_cursor']}")
             
-        if snippet:
-            lines.append(f"{key} {name}\n{snippet}")
-        else:
-            lines.append(f"{key} {name}")
-            
-    return "\n\n".join(lines)
+    return "\n".join(lines)
 
 
 def format_read_ticket(data: dict) -> str:
-    if data.get("status") == "error":
+    if "error" in data or "message" in data:
         return f"❌ Error: {data.get('message', 'Unknown error')}"
     key = data.get("ticket_id") or data.get("key", "UNKNOWN")
     name = data.get("name", "Unknown Title")
-    desc = data.get("description", data.get("description_html", "No description"))
+    state = data.get("state", "None")
+    priority = data.get("priority", "none")
+    desc = data.get("description", "")
     
-    desc_clean = clean_markdown_escapes(str(desc))
-    desc_clean = re.sub(r'<[^>]+>', '', desc_clean).strip()
+    state_emoji = get_state_emoji(state)
+    priority_emoji = get_priority_emoji(priority)
     
-    returnDisplay = f"{key} {name}\n\n{desc_clean}"
+    returnDisplay = f"{state_emoji}{priority_emoji}{key} {name}"
+    
+    if desc:
+        import re
+        desc_clean = re.sub(r'<[^>]+>', '', str(desc)).strip()
+        if desc_clean:
+            returnDisplay += f"\n📝 {desc_clean}"
+            
+    labels = data.get("labels", [])
+    if labels:
+        if isinstance(labels, list) and len(labels) > 0 and isinstance(labels[0], dict):
+            labels = [lbl.get("name", "") for lbl in labels]
+        returnDisplay += f"\n🏷️ {','.join(labels)}"
+        
+    assignees = data.get("assignees", [])
+    if assignees:
+        if isinstance(assignees, list) and len(assignees) > 0 and isinstance(assignees[0], dict):
+            assignees = [a.get("display_name", a.get("username", "")) for a in assignees]
+        returnDisplay += f"\n👤 {','.join([str(a) for a in assignees])}"
+    
     if "comments" in data:
-        returnDisplay += "\n\nComments:\n" + data["comments"]
+        returnDisplay += "\n💬 Comments:\n" + data["comments"]
         
     return returnDisplay
 
@@ -186,7 +225,14 @@ def format_complete_work(data: dict) -> str:
         return f"❌ Error: {data.get('message', '')}"
         
     key = data.get("ticket_id") or data.get("key", "UNKNOWN")
-    return f"✅ Ticket {key} transitioned to Done"
+    name = data.get("name", "")
+    state = data.get("state", "Done")
+    priority = data.get("priority", "none")
+    
+    state_emoji = get_state_emoji(state)
+    priority_emoji = get_priority_emoji(priority)
+    
+    return f"✅{state_emoji}{priority_emoji}{key} {name}".strip()
 
 
 def format_transition_ticket(data: dict) -> str:
