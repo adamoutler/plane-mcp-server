@@ -261,7 +261,7 @@ def register_create_update_tools(mcp: FastMCP) -> None:
         state_name: str | None = None,
         labels: list[str] | None = None,
         cycle_name: str | None = None,
-    ) -> dict:
+    ) -> str:
         client, workspace_slug = get_plane_client_context()
         resolver = EntityResolver(client, workspace_slug)
         journey = CreateUpdateJourney(resolver)
@@ -300,7 +300,7 @@ def register_create_update_tools(mcp: FastMCP) -> None:
         replace_text: str | None = None,
         replace_target_snippet: str | None = None,
         comment: str | None = None
-    ) -> dict:
+    ) -> str:
         """
         Update a ticket's title, description, or add a comment. Features smart targeting to avoid JSON escaping errors.
         

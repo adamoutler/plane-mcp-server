@@ -221,7 +221,7 @@ def register_read_tools(mcp: FastMCP) -> None:
         limit: int = 50, 
         cursor: str | None = None, 
         lod: Literal["summary", "standard", "full"] = "standard"
-    ) -> dict:
+    ) -> str:
         client, workspace_slug = get_plane_client_context()
         resolver = EntityResolver(client, workspace_slug)
         journey = ReadJourney(resolver)
@@ -262,7 +262,7 @@ def register_read_tools(mcp: FastMCP) -> None:
     @mcp_error_boundary
     def read_ticket(
         ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False
-    ) -> dict:
+    ) -> str:
         """
         Read the details of a single ticket.
 
