@@ -143,7 +143,7 @@ def get_state_emoji(state: str | dict) -> str:
         "canceled": "🔴",
         "delayed": "🟡"
     }
-    return mapping.get(state, "⚪")
+    return mapping.get(state, f"⚪ `{state.capitalize()}`")
 
 def format_search_tickets(data: dict) -> str:
     if data.get("status") == "error":
