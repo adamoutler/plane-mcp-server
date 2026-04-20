@@ -41,7 +41,9 @@ def with_emojification(formatter_func):
                 # Fallthrough to raw JSON on error (the "happy path only" rule)
                 logger.debug("Emojification skipped due to error: %s", e)
                 return json.dumps(raw_data, indent=2)
-                
+        
+        from typing import Any
+        wrapper.__annotations__["return"] = Any
         return wrapper
     return decorator
 
