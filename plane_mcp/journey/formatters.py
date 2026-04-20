@@ -80,7 +80,10 @@ def format_help(data: dict) -> str:
             else:
                 lines.append(f"📌 {name}")
                 
-    lines.append("\nField Definitions:\nPriority: 🚨urgent ⏫high 🔼medium 🔽low ➖none\nStatus: ⚫Backlog 🟣Todo 🔵In Progress 🟢Done 🔴Cancelled 🟡delayed")
+    lines.append("\nField Definitions:")
+    lines.append("Priority: 🚨urgent ⏫high 🔼medium 🔽low ➖none")
+    lines.append("Status: ⚫Backlog 🟣Todo 🔵In Progress 🟢Done 🔴Cancelled 🟡delayed")
+    lines.append("Meta: ✅done 🔄cycle 🏷️label ⏭️next ⏮️prev")
     return "\n".join(lines)
 
 
