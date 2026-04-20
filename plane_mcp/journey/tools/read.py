@@ -30,7 +30,11 @@ class ReadJourney(JourneyBase):
         if project_slug.lower() == 'help':
             from plane_mcp.journey.cache import get_cached_workspace_context
             opts = get_cached_workspace_context(0).copy()
-            llm_content = {"projects": opts.get("projects", []), "priorities": opts.get("priorities", [])}
+            llm_content = {
+                "projects": opts.get("projects", []), 
+                "priorities": opts.get("priorities", []),
+                "stickies": opts.get("stickies", [])
+            }
             display_lines = []
             for p in llm_content.get("projects", []):
                 slug = p.get("project_slug", "UNKNOWN")

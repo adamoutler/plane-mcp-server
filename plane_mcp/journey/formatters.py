@@ -14,9 +14,8 @@ def clean_markdown_escapes(text: str) -> str:
 def with_emojification(formatter_func):
     """
     Decorator that applies a specific formatting function to the raw JSON output of a tool.
-    If the formatting succeeds, returns a unified string containing the human-readable
-    text and a collapsible JSON block.
-    If formatting fails (e.g., missing required keys), gracefully falls back to returning the raw JSON.
+    Returns the formatted human-readable text.
+    If formatting fails, gracefully falls back to returning the raw JSON.
     """
     def decorator(func):
         @functools.wraps(func)
@@ -28,9 +27,6 @@ def with_emojification(formatter_func):
             if not isinstance(raw_data, dict):
                 return str(raw_data)
                 
-            if "llmContent" in raw_data and "returnDisplay" in raw_data:
-                return json.dumps(raw_data, indent=2)
-                
             try:
                 # The formatter_func handles the specific logic for this tool's output
                 human_text = formatter_func(raw_data)
@@ -39,7 +35,7 @@ def with_emojification(formatter_func):
                 if not human_text:
                     return json.dumps(raw_data, indent=2)
 
-                return human_text
+                return str(human_text)
 
             except Exception as e:
                 # Fallthrough to raw JSON on error (the "happy path only" rule)
@@ -53,6 +49,7 @@ def with_emojification(formatter_func):
 def format_help(data: dict) -> str:
     projects = data.get("projects", [])
     priorities = data.get("priorities", [])
+    stickies = data.get("stickies", [])
     
     lines = []
     for p in projects:
@@ -69,6 +66,18 @@ def format_help(data: dict) -> str:
     if priorities:
         lines.append(f"⚡{','.join(priorities)}")
         
+    if stickies:
+        lines.append("\n📝 Stickies:")
+        for sticky in stickies:
+            name = sticky.get("name") or "Untitled"
+            desc = sticky.get("description_stripped") or ""
+            if len(desc) > 80:
+                desc = desc[:80] + "..."
+            if desc:
+                lines.append(f"📌 {name}: {desc}")
+            else:
+                lines.append(f"📌 {name}")
+                
     lines.append("\nField Definitions:\nPriority: 🚨urgent ⏫high 🔼medium 🔽low ➖none\nStatus: ⚫Backlog 🟣Todo 🔵In Progress 🟢Done 🔴Cancelled 🟡delayed")
     return "\n".join(lines)
 
