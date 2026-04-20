@@ -133,4 +133,7 @@ def with_yaml(func: T) -> T:
         result = func(*args, **kwargs)
         return format_as_yaml(result)
 
+    if 'return' in wrapper.__annotations__:
+        wrapper.__annotations__['return'] = Any
+
     return cast(T, wrapper)
