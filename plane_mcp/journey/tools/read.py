@@ -292,23 +292,4 @@ def register_read_tools(mcp: FastMCP) -> None:
         client, workspace_slug = get_plane_client_context()
         resolver = EntityResolver(client, workspace_slug)
         journey = ReadJourney(resolver)
-        raw_data = journey.read_ticket(ticket_id, lod, comments)
-
-        import re
-        def clean_description_for_read(text: str) -> str:
-            if not text:
-                return ""
-            # Only strip HTML tags, preserve newlines and Markdown
-            return re.sub(r'<[^>]+>', '', text).strip()
-
-        slug = raw_data.get("ticket_id", raw_data.get("key", ticket_id))
-        title = raw_data.get("name", "Untitled")
-        desc = raw_data.get("description", "")
-
-        clean_desc = clean_description_for_read(desc)
-
-        returnDisplay = f"{slug} {title}\n\n{clean_desc}"
-        if "comments" in raw_data:
-            returnDisplay += "\n\nComments:\n" + raw_data["comments"]
-
-        return raw_data
+        return journey.read_ticket(ticket_id, lod, comments)
