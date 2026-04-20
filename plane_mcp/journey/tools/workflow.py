@@ -171,6 +171,7 @@ class WorkflowJourney(JourneyBase):
 
 
 def register_workflow_tools(mcp: FastMCP) -> None:
+    from plane_mcp.journey.json_formatter import with_json
     def transition_ticket(ticket_id: str, state_name: str) -> dict:
         client, workspace_slug = get_plane_client_context()
         resolver = EntityResolver(client, workspace_slug)
@@ -188,19 +189,19 @@ def register_workflow_tools(mcp: FastMCP) -> None:
             ticket_id: The globally unique, human-readable identifier (e.g., ENG-123).
             state_name: The name of the state to transition to (e.g. 'In Progress').
         """
-    transition_ticket = mcp.tool()(mcp_error_boundary(transition_ticket))
+    transition_ticket = mcp.tool()(with_json(mcp_error_boundary(transition_ticket)))
 
     @mcp.tool()
+    @with_json
     @mcp_error_boundary
     def begin_work(ticket_ids: list[str], cycle_name: str) -> dict:
         """
         Add multiple tickets to a cycle (creating it if missing) and attempt to transition them to 'In Progress'.
         Supports batch operations across multiple tickets and potentially multiple projects.
         Use this macro as your primary method for standard workflow progression (starting work).
-        
+
         Args:
-            ticket_ids: List of globally unique, human-readable identifiers (e.g. ['ENG-123', 'ENG-124']). 
-                The system automatically resolves the project and issue routing from these prefixes.
+            ticket_ids: List of globally unique, human-readable identifiers (e.g. ['ENG-123', 'ENG-124']). The system automatically resolves the project and issue routing from these prefixes.
             cycle_name: The name of the cycle to add tickets to. If you are unsure, make your best logical guess.
         """
         client, workspace_slug = get_plane_client_context()
@@ -211,6 +212,7 @@ def register_workflow_tools(mcp: FastMCP) -> None:
         return raw_data
 
     @mcp.tool()
+    @with_json
     @mcp_error_boundary
     def complete_work(ticket_id: str, comment: str) -> dict:
         """

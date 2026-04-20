@@ -213,6 +213,7 @@ class ReadJourney(JourneyBase):
 
 
 def register_read_tools(mcp: FastMCP) -> None:
+    from plane_mcp.journey.json_formatter import with_json
     
     def search_tickets(
         project_slug: str, 
@@ -258,9 +259,10 @@ def register_read_tools(mcp: FastMCP) -> None:
             cursor: Pagination cursor for getting the next set of results.
             lod: Level of Detail profile ("summary", "standard", or "full"). Default is "standard".
         """
-    search_tickets = mcp.tool()(mcp_error_boundary(search_tickets))
+    search_tickets = mcp.tool()(with_json(mcp_error_boundary(search_tickets)))
 
     @mcp.tool()
+    @with_json
     @mcp_error_boundary
     def read_ticket(
         ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False

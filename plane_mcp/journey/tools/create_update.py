@@ -258,6 +258,8 @@ class CreateUpdateJourney(JourneyBase):
         return {"issue_key": ticket_id, "status": "success", "message": "Ticket updated successfully."}
 
 def register_create_update_tools(mcp: FastMCP) -> None:
+    from plane_mcp.journey.json_formatter import with_json
+    
     def create_ticket(
         title: str,
         project_slug: str,
@@ -292,9 +294,10 @@ def register_create_update_tools(mcp: FastMCP) -> None:
             labels: List of label names.
             cycle_name: Name of the cycle to add this ticket to.
         """
-    create_ticket = mcp.tool()(mcp_error_boundary(create_ticket))
+    create_ticket = mcp.tool()(with_json(mcp_error_boundary(create_ticket)))
 
     @mcp.tool()
+    @with_json
     @mcp_error_boundary
     def update_ticket(
         ticket_id: str,
