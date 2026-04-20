@@ -30,10 +30,14 @@ class ReadJourney(JourneyBase):
         if project_slug.lower() == 'help':
             from plane_mcp.journey.cache import get_cached_workspace_context
             opts = get_cached_workspace_context(0).copy()
-            llm_content = {"projects": opts.get("projects", []), "priorities": opts.get("priorities", [])}
+            llm_content = {
+                "projects": opts.get("projects", []), 
+                "priorities": opts.get("priorities", []),
+                "stickies": opts.get("stickies", [])
+            }
 
             
-            return llm_content
+            return json.dumps(llm_content, indent=2)
 
         project_id = self.resolver.resolve_project(project_slug)
         client, workspace_slug = get_plane_client_context()
@@ -149,7 +153,7 @@ class ReadJourney(JourneyBase):
         }
         if unresolved_labels:
             result["warnings"] = [f"Label not found and filter was skipped: {', '.join(unresolved_labels)}"]
-        return result
+        return json.dumps(result, indent=2)
 
     def read_ticket(
         self, ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False
@@ -280,4 +284,4 @@ def register_read_tools(mcp: FastMCP) -> None:
         if raw_data.get("description"):
             raw_data["description"] = re.sub(r'<[^>]+>', '', raw_data["description"]).strip()
 
-        return raw_data
+        return json.dumps(raw_data, indent=2)

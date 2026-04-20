@@ -91,8 +91,13 @@ class CreateUpdateJourney(JourneyBase):
         if project_slug.lower() == 'help':
             from plane_mcp.journey.cache import get_cached_workspace_context
             ctx = get_cached_workspace_context(0)
-            llm_content = {"projects": ctx.get("projects", []), "priorities": ctx.get("priorities", [])}
-            return llm_content
+            llm_content = {
+                "projects": ctx.get("projects", []), 
+                "priorities": ctx.get("priorities", []),
+                "stickies": ctx.get("stickies", [])
+            }
+            import json
+            return json.dumps(llm_content, indent=2)
 
         project_id = self.resolver.resolve_project(project_slug)
         client, workspace_slug = get_plane_client_context()
@@ -270,7 +275,8 @@ def register_create_update_tools(mcp: FastMCP) -> None:
         if project_slug.lower() == 'help':
             return raw_data
 
-        return raw_data
+        import json
+        return json.dumps(raw_data, indent=2)
 
     create_ticket.__doc__ = """
         Create a new ticket with automatic resolution of labels and cycles.
@@ -319,4 +325,5 @@ def register_create_update_tools(mcp: FastMCP) -> None:
             ticket_id, new_title, append_text, append_after_snippet, replace_text, replace_target_snippet, comment
         )
         
-        return raw_data
+        import json
+        return json.dumps(raw_data, indent=2)
