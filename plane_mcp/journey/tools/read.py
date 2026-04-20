@@ -37,7 +37,7 @@ class ReadJourney(JourneyBase):
             }
 
             
-            return json.dumps(llm_content)
+            return llm_content
 
         project_id = self.resolver.resolve_project(project_slug)
         client, workspace_slug = get_plane_client_context()
@@ -153,7 +153,7 @@ class ReadJourney(JourneyBase):
         }
         if unresolved_labels:
             result["warnings"] = [f"Label not found and filter was skipped: {', '.join(unresolved_labels)}"]
-        return json.dumps(result)
+        return result
 
     def read_ticket(
         self, ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False
@@ -284,4 +284,4 @@ def register_read_tools(mcp: FastMCP) -> None:
         if raw_data.get("description"):
             raw_data["description"] = re.sub(r'<[^>]+>', '', raw_data["description"]).strip()
 
-        return json.dumps(raw_data)
+        return raw_data
