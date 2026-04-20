@@ -82,7 +82,7 @@ def format_help(data: dict) -> str:
                 
     lines.append("\nField Definitions:")
     lines.append("Priority: 🚨urgent ⏫high 🔼medium 🔽low ➖none")
-    lines.append("Status: ⚫Backlog 🟣Todo 🔵In Progress 🟢Done 🔴Cancelled 🟡delayed")
+    lines.append("Status: ⚫Backlog 🟣Todo 🔵In Progress 🟢Done 🔴Cancelled 🟡delayed ⚪`Name`")
     lines.append("Meta: ✅done 🔄cycle 🏷️label ⏭️next ⏮️prev")
     return "\n".join(lines)
 
