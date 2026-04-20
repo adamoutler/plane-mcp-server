@@ -97,7 +97,7 @@ class CreateUpdateJourney(JourneyBase):
                 "stickies": ctx.get("stickies", [])
             }
             import json
-            return json.dumps(llm_content, indent=2)
+            return json.dumps(llm_content)
 
         project_id = self.resolver.resolve_project(project_slug)
         client, workspace_slug = get_plane_client_context()
@@ -276,7 +276,7 @@ def register_create_update_tools(mcp: FastMCP) -> None:
             return raw_data
 
         import json
-        return json.dumps(raw_data, indent=2)
+        return json.dumps(raw_data)
 
     create_ticket.__doc__ = """
         Create a new ticket with automatic resolution of labels and cycles.
@@ -326,4 +326,4 @@ def register_create_update_tools(mcp: FastMCP) -> None:
         )
         
         import json
-        return json.dumps(raw_data, indent=2)
+        return json.dumps(raw_data)
