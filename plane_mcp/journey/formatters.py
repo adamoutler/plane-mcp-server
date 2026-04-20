@@ -71,14 +71,9 @@ def format_help(data: dict) -> str:
     if stickies:
         lines.append("\n📝 Stickies:")
         for sticky in stickies:
-            name = sticky.get("name") or "Untitled"
-            desc = sticky.get("description_stripped") or ""
-            if len(desc) > 80:
-                desc = desc[:80] + "..."
+            desc = sticky.get("description_stripped") or sticky.get("description") or ""
             if desc:
-                lines.append(f"📌 {name}: {desc}")
-            else:
-                lines.append(f"📌 {name}")
+                lines.append(f"- {desc}")
                 
     lines.append("\nField Definitions:")
     lines.append("Priority: 🚨urgent ⏫high 🔼medium 🔽low ➖none")
