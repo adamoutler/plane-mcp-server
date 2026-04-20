@@ -279,11 +279,4 @@ def register_read_tools(mcp: FastMCP) -> None:
         client, workspace_slug = get_plane_client_context()
         resolver = EntityResolver(client, workspace_slug)
         journey = ReadJourney(resolver)
-        raw_data = journey.read_ticket(ticket_id, lod, comments)
-
-        # Strip HTML tags from description, preserving newlines and Markdown structure
-        import re
-        if raw_data.get("description"):
-            raw_data["description"] = re.sub(r'<[^>]+>', '', raw_data["description"]).strip()
-
-        return raw_data
+        return journey.read_ticket(ticket_id, lod, comments)
