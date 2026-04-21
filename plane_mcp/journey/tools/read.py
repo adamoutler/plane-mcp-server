@@ -8,6 +8,7 @@ from plane.models.query_params import RetrieveQueryParams
 from plane_mcp.client import get_plane_client_context
 from plane_mcp.journey.base import JourneyBase, mcp_error_boundary
 from plane_mcp.journey.lod import LODProfile
+from plane_mcp.journey.yaml_formatter import with_yaml
 from plane_mcp.resolver import EntityResolver
 
 
@@ -258,9 +259,10 @@ def register_read_tools(mcp: FastMCP) -> None:
             cursor: Pagination cursor for getting the next set of results.
             lod: Level of Detail profile ("summary", "standard", or "full"). Default is "standard".
         """
-    search_tickets = mcp.tool()(mcp_error_boundary(search_tickets))
+    search_tickets = mcp.tool()(with_yaml(mcp_error_boundary(search_tickets)))
 
     @mcp.tool()
+    @with_yaml
     @mcp_error_boundary
     def read_ticket(
         ticket_id: str, lod: Literal["summary", "standard", "full"] = "standard", comments: bool = False
