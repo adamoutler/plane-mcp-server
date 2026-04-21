@@ -31,10 +31,18 @@ class ReadJourney(JourneyBase):
         if project_slug.lower() == 'help':
             from plane_mcp.journey.cache import get_cached_workspace_context
             opts = get_cached_workspace_context(0).copy()
+            
+            raw_stickies = opts.get("stickies", [])
+            processed_stickies = []
+            for s in raw_stickies:
+                desc = s.get("description_stripped") or s.get("description") or ""
+                if desc:
+                    processed_stickies.append(desc)
+                    
             llm_content = {
                 "projects": opts.get("projects", []), 
                 "priorities": opts.get("priorities", []),
-                "stickies": opts.get("stickies", [])
+                "stickies": processed_stickies
             }
 
             
